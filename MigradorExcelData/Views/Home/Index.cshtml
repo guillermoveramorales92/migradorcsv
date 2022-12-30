@@ -1,0 +1,348 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="mt-5">
+    <h4 class="text-center text-white">Sube tu archivo</h4>
+
+    <div class="container mx-auto">
+        <div class="form-group col-md-7 mx-auto">
+            <label for="IpBaseDatos" class="text-white">Ip base de datos*</label>
+            <input type="text" class="form-control col-md-12 requerido" id="IpBaseDatos" name="IpBaseDatos" data-nombre="ip" />
+        </div>
+        <div class="form-group col-md-7 mx-auto">
+            <label for="Usuario" class="text-white">Usuario*</label>
+            <input type="text" class="form-control col-md-12 requerido" id="Usuario" name="Usuario" data-nombre="usuario" />
+        </div>
+        <div class="form-group col-md-7 mx-auto">
+            <label for="Password" class="text-white">Contraseña</label>
+            <input type="password" class="form-control col-md-12" id="Password" name="Password" />
+        </div>
+        <div class="form-group col-md-7 mx-auto">
+            <label class="text-white" for="NombreEsquema">Nombre del esquema*</label>
+            <input type="text" class="form-control col-md-12 requerido" id="NombreEsquema" name="NombreEsquema" data-nombre="esquema" />
+        </div>
+        <div class="form-group col-md-7 mx-auto">
+            <label class="text-white" for="NombreTabla">Nombre de la tabla*</label>
+            <input type="text" class="form-control col-md-12 requerido" id="NombreTabla" name="NombreTabla" data-nombre="tabla" />
+        </div>
+    </div>
+    <div class="container d-flex justify-content-center mt-5">
+        <label class="form-control dropbox px-4 pt-5 text-center" for="archivo" id="labeldrag" draggable="true" ondrop="drophandler(event)" ondragover="dragover(event)">
+            <div class="col-md-12 text-center font-weight-bold" id="labelArchivo">Arrastre su archivo aquí o de click para seleccionar su archivo</div>
+            <span class="col-12 mt-5" style="display:flex;" id="iconArchivo">
+                <i class="fa fa-file-excel-o fa-4x mx-auto" aria-hidden="true"></i>
+            </span>
+            <input type="file" class="input-file-event col-md-12 requeridoArchivo" id="archivo" name="archivo" accept=".csv" data-nombre="archivo" />
+        </label>
+    </div>
+    <div class="container text-center mt-4">
+        <button id="btnPrueba" type="button" class="btn btn-primary">Prueba conexion</button>
+        <button id="btnMigrar" type="button" class="btn btn-success">Migrar datos</button>
+    </div>
+
+    <p class="mt-4 text-white text-center"><span class="font-weight-bold">Nota: </span>Las columnas del excel deben estar nombradas como en la base de datos a la cual quiere exportar los datos.</p>
+
+
+
+    @*  MODAL DE CARGA DE DATOS  *@
+    <div class="modal fade" id="cargaModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Exportanto datos</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-center">Exportando <span class="font-weight-bold" id="ptextpendiente"></span> registros de <span class="font-weight-bold" id="ptexttotal"></span></p>
+                    <div class="progress my-5">
+                        <div id="barraCarga" class="progress-bar progress-bar-striped bg-success" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @*  END MODAL DE CARGA DE DATOS  *@
+
+
+    @*  MODAL CONFIRMACION EXPORTACION  *@
+    <div class="modal fade" id="modalRespuesta" tabindex="-1" aria-labelledby="modalRespuestaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalRespuestaLabel">Exportanto datos</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col text-center">
+                            <div class="font-weight-bold">Registros migrados</div>
+                            <div class="font-weight-bold text-primary" id="rMigrados"></div>
+                        </div>
+                        <div class="col text-center">
+                            <div class="font-weight-bold">Registros NO migrados</div>
+                            <div class="font-weight-bold text-primary" id="rNoMigrados">1</div>
+                        </div>
+                    </div>
+                    <hr />
+                    <div id="respuestaMigracion"></div>
+                </div>
+                <div class="modal-footer d-flex justify-content-center">
+                    <button type="button" class="btn btn-success" data-dismiss="modal">Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @*  END MODAL CONFIRMACION EXPORTACION *@
+
+
+
+</div>
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $('#btnPrueba').click(function () {
+            GenerarObjeto('prueba')
+        })
+
+        $('#btnMigrar').click(function () {
+            GenerarObjeto('migrar')
+        })
+    })
+
+    var archivo = document.getElementById('archivo')
+    var iconArchivo = document.getElementById('iconArchivo')
+    var labelArchivo = document.getElementById('labelArchivo')
+    var objsExport
+
+    archivo.onchange = function (event) {
+        if (archivo.files.lenght > 0) {
+            if (archivo.files[0].type != 'text/csv') {
+                warningAlert('Advertencia','el archivo no es del formato correcto (.CSV)')
+                archivo.value = ''
+                return false
+            }
+        }
+        leerArchivo(event)
+    }
+
+    function parseCSV(text) {
+        // Obtenemos las lineas del texto
+        let lines = text.replace(/\r/g, '').split('\n');
+        return lines.map(line => {
+            // Por cada linea obtenemos los valores
+            let values = line.split(',');            
+            return values;
+        });
+    }
+
+    function leerArchivo(evt) {
+
+        let archivoLec = evt.target.files[0];        
+        let lector = new FileReader();
+
+        lector.onload = (e) => {
+            // Cuando el archivo se terminó de cargar
+            objsExport = parseCSV(e.target.result);
+            objsExport = objsExport.filter(item => item != '')
+            cambiarIconLabel(archivoLec.name, objsExport.length - 1)
+        };
+        // Leemos el contenido del archivo seleccionado
+        lector.readAsBinaryString(archivoLec);
+    }
+
+    //function reverseMatrix(matrix) {
+    //    let output = [];
+    //    // Por cada fila
+    //    matrix.forEach((values, row) => {
+    //        // Vemos los valores y su posicion
+    //        values.forEach((value, col) => {
+    //            // Si la posición aún no fue creada
+    //            if (output[col] === undefined) output[col] = [];
+    //            output[col][row] = value;
+    //        });
+    //    });
+    //    return output;
+    //}
+
+
+    function dragover(event) {
+        event.preventDefault()
+    }
+
+    function drophandler(ev) {
+        if (ev.dataTransfer.items.length > 1) {
+            warningAlert('dvetencia', 'Solo puedes subir un archivo a la vez')
+            limpiarArchivos()
+            return false
+        }
+        leerArchivo(event)
+    }
+
+    function cambiarIconLabel(nombreArchivo, registros) {
+        iconArchivo.classList.add('text-success')
+        labelArchivo.innerText = `Archivo ${nombreArchivo} cargado, ${registros} registros para exportar`
+    }
+
+    function limpiarArchivos() {
+        setTimeout(function () { archivo.value = '' }, 300)
+    }
+
+    function GenerarObjeto(option) {
+        var requeridos = document.getElementsByClassName('requerido')
+        var mnsError = document.getElementsByClassName('mns-error')
+        var error = false
+
+        //  remueve todas las alertas de errores
+        for (let e = mnsError.length; e > 0; e--) {
+            mnsError[0].remove()
+        }
+
+        //  inserta alertas de errores
+        for (let i = 0; i < requeridos.length; i++) {
+            if (requeridos[i].value == '') {
+                var elementError = `<span class="text-danger mns-error">El campo ${requeridos[i].getAttribute('data-nombre')} es obligatorio*</span>`;
+                requeridos[i].insertAdjacentHTML('afterend', elementError)
+                error = true
+            }
+        }
+
+        if (option != 'prueba') {
+            console.log(archivo.value)
+            if (archivo.value === '') {
+                var elementError = `<span class="text-danger mns-error font-weight-bold">El campo ${archivo.getAttribute('data-nombre')} es obligatorio*</span>`;
+                archivo.insertAdjacentHTML('afterend', elementError)
+                error = true
+            }
+        }
+
+        if (error == true) {
+            warningAlert("Advertencia", 'Llene los campos obligatorios')
+            return false
+        }
+
+        var conexionData = {}
+        conexionData.IpBaseDatos = $('#IpBaseDatos').val();
+        conexionData.Usuario = $('#Usuario').val();
+        conexionData.Password = $('#Password').val();
+        conexionData.NombreEsquema = $('#NombreEsquema').val();
+        conexionData.NombreTabla = $('#NombreTabla').val();
+
+        var urlDestino = '@(Url.Action("PruebaConexion","Home"))'
+        
+        if (option != 'prueba') {
+            var urlDestino = '@(Url.Action("InsertarRegistros", "Home"))'
+            MigrarDatos(urlDestino, conexionData)
+        } else {
+            PruebaConexion(urlDestino, conexionData)
+        }
+    }
+
+    function PruebaConexion(urlDestino, conexionData) {
+        $.ajax({
+            url: urlDestino,
+            type: 'POST',
+            data:
+            {
+                cadenaconexion: JSON.stringify(conexionData)
+            },
+            success: function (data) {
+                console.log(data)
+                if (data.Error != true)
+                    successAlert("Correcto", "Conexion exitosa a la base de datos")
+                else
+                    errorAlert("Error", data.Mensaje)
+            }
+        })
+    }    
+
+    function MigrarDatos(urlDestino, conexionData) {
+
+        var contador = 1
+        var contadorInsert = 0
+        var contadorError = 0
+        var contadorMigrado = objsExport.length - 1
+        var respuesta = ""
+        var barraCarga = document.getElementById('barraCarga')
+        var ptextpendiente = document.getElementById('ptextpendiente')
+        var ptexttotal = document.getElementById('ptexttotal')
+        var rmigrados = document.getElementById('rMigrados')
+        var rnomigrados = document.getElementById('rNoMigrados')
+        var respuestamigracion = document.getElementById('respuestaMigracion')
+        var querysql = `INSERT INTO ${conexionData.NombreTabla} (`
+
+
+        objsExport[0].map(item => {
+            querysql += item + ","            
+        })
+
+        querysql = querysql.substring(0, querysql.length - 1) + ") VALUES ("
+
+        ptexttotal.innerText = contadorMigrado
+        $('#cargaModal').modal('show')
+        
+        for (let i = 1; i < objsExport.length; i++) {
+
+            var queryCompleto = querysql
+
+            objsExport[i].map(item => {
+                queryCompleto += validaTipoDato(item) + ","
+            })
+
+            queryCompleto = queryCompleto.substring(0, queryCompleto.length - 1) + ");"
+            console.log(queryCompleto)
+            $.ajax({
+                url: urlDestino,
+                type: 'POST',
+                data:
+                {
+                    cadenaconexion: JSON.stringify(conexionData),
+                    queryInsert: queryCompleto
+                },
+                success: function (data) {
+                    if (data.Error == true) {
+                        respuesta += data.Mensaje + '\n'
+                        contadorError++
+                        console.log(contadorError)
+                    }
+                    else
+                    {
+                        contadorInsert++
+                        console.log(contadorInsert)
+                    }                        
+                }
+            })
+            ptextpendiente.innerText = contador
+
+            setTimeout(function () {
+                barraCarga.style.width = ((contador * 100) / objsExport.length) + '%'
+            },1000)
+
+            contador++   
+        }
+
+        setTimeout(function () {
+            $('#cargaModal').modal('hide')
+            setTimeout(function () {
+                rmigrados.innerText = contadorInsert
+                rnomigrados.innerText = contadorError
+                respuestamigracion.innerText = respuesta
+                $('#modalRespuesta').modal('show')
+            },2000)
+        },2000)
+    }
+
+    function validaTipoDato(dato) {
+        var regex = new RegExp('[a-zA-z]')
+        
+        if (!regex.test(dato) && dato != '' && !dato.includes('-') && !dato.includes('/'))
+            return parseFloat(dato)
+        else
+            return `'${dato}'`
+    }
+
+</script>

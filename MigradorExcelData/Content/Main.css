@@ -1,0 +1,30 @@
+﻿
+body {
+    background: linear-gradient(to right, rgba(40, 47, 56 ), rgba(48, 97, 159));
+}
+
+.dropbox {
+    background-color: rgba(255,255,255, 0.6);
+    border-radius: 5px;
+    border: 1px solid gray;
+    width: 360px;
+    height: 250px;
+    align-items: center;
+    position: relative;
+}
+
+/*      ESTE ESTILO ES PARA OCULTAR EL TEXTO DEFAULT DEL DROPZONE       */
+.dz-message{
+    display:none;
+}
+
+
+.input-file-event {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    width: 360px;
+    height: 250px;
+    /*display: none;*/
+} 
